@@ -283,6 +283,15 @@ printerOptsParser = do
           "Number of spaces between top-level declarations"
             <> showDefaultValue poNewlinesBetweenDecls
       ]
+  poMaxLineLength <- Just <$>
+    (optional . option auto . mconcat)
+      [ long "max-line-length",
+        metavar "WIDTH",
+        help $
+          "Max line length"
+            <> showDefaultValue poMaxLineLength
+      ]
+
   pure PrinterOpts {..}
 
 ----------------------------------------------------------------------------
@@ -341,6 +350,10 @@ instance ToCLIArgument Mode where
   toCLIArgument Stdout = "stdout"
   toCLIArgument InPlace = "inplace"
   toCLIArgument Check = "check"
+
+instance ToCLIArgument a => ToCLIArgument (Maybe a) where
+  toCLIArgument (Just v) = toCLIArgument v
+  toCLIArgument Nothing = "Nothing"
 
 showAllValues :: forall a. (Enum a, Bounded a, ToCLIArgument a) => String
 showAllValues = format (map toCLIArgument' [(minBound :: a) ..])

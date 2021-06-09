@@ -126,16 +126,28 @@ switchLayout ::
   -- | Computation to run with changed layout
   R () ->
   R ()
-switchLayout spans' = enterLayout (spansLayout spans')
+switchLayout spans' r = do
+  mbMaxLineLength <- getPrinterOpt poMaxLineLength
+  enterLayout (spansLayout mbMaxLineLength spans') r
+  -- TODO: omit the last argument `r`.
 
 -- | Which layout combined spans result in?
-spansLayout :: [SrcSpan] -> Layout
-spansLayout = \case
+spansLayout :: Maybe Int -> [SrcSpan] -> Layout
+spansLayout mbMaxLineLength = \case
   [] -> SingleLine
   (x : xs) ->
-    if isOneLineSpan (foldr combineSrcSpans x xs)
+    if isOneLineSpan combinedSpan && not (shouldBreakSingleLine combinedSpan)
       then SingleLine
       else MultiLine
+    where
+      combinedSpan =  (foldr combineSrcSpans x xs)
+      shouldBreakSingleLine :: SrcSpan -> Bool
+      shouldBreakSingleLine (RealSrcSpan rs) =
+          maybe False (spanLineLength >) mbMaxLineLength
+          where
+              spanLineLength = srcSpanEndCol rs - srcSpanStartCol rs
+      shouldBreakSingleLine _ = False
+
 
 -- | Insert a space if enclosing layout is single-line, or newline if it's
 -- multiline.
